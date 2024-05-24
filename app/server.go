@@ -148,8 +148,14 @@ func handleConnection(conn net.Conn) {
 			log.Fatal(err)
 		}
 		filename := filepath.Join(dir, matches[1])
+
+		// _, err:=os.Stat(filename)
 		// fmt.Println(file)
 		file, err := os.ReadFile(filename)
+		if os.IsNotExist(err) {
+			Respond(conn, Response{Version: request.Version, Code: NotFound})
+			return
+		}
 		if err != nil {
 			log.Fatal(err)
 		}
