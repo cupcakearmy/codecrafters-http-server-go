@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,12 +44,18 @@ type Response struct {
 	Code    HttpCode
 	Version string
 	Body    string
+	BodyRaw []byte
 	Headers []Header
 }
 
 func Respond(conn net.Conn, response Response) {
 	fmt.Fprintf(conn, "%s %d %s%s", response.Version, response.Code.Code, response.Code.Message, HTTPDelimiter)
-	bodySize := len(response.Body)
+	bodySize := 0
+	if response.Body != "" {
+		bodySize = len(response.Body)
+	} else {
+		bodySize = len(response.BodyRaw)
+	}
 	if bodySize > 0 {
 		response.Headers = append(response.Headers, Header{Name: "Content-Length", Value: strconv.Itoa(bodySize)})
 	}
@@ -58,7 +65,11 @@ func Respond(conn net.Conn, response Response) {
 
 	fmt.Fprint(conn, HTTPDelimiter)
 	if bodySize > 0 {
-		fmt.Fprint(conn, response.Body)
+		if response.Body != "" {
+			fmt.Fprint(conn, response.Body)
+		} else {
+			conn.Write(response.BodyRaw)
+		}
 	}
 
 	// fmt.Fprintf(conn, "HTTP/1.1 %d %s%s%s", response.Code, response.Message, HTTPDelimiter, HTTPDelimiter)
@@ -126,9 +137,34 @@ func handleConnection(conn net.Conn) {
 		Respond(conn, Response{Version: request.Version, Code: BadRequest})
 	}
 
-	re := regexp.MustCompile(`^/echo/([A-Za-z]+)$`)
-	matches := re.FindStringSubmatch(request.Path)
-	if len(matches) > 0 {
+	reFiles := regexp.MustCompile(`^/files/([A-Za-z0-9_\-.]+)$`)
+	if matches := reFiles.FindStringSubmatch(request.Path); len(matches) > 0 {
+
+		if len(os.Args) != 3 {
+			log.Fatal("Not enough args")
+		}
+		dir, err := filepath.Abs(os.Args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		filename := filepath.Join(dir, matches[1])
+		// fmt.Println(file)
+		file, err := os.ReadFile(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		Respond(conn, Response{
+			Version: request.Version,
+			Code:    OK,
+			BodyRaw: file,
+			Headers: []Header{{Name: "Content-Type", Value: "application/octet-stream"}},
+		})
+		return
+	}
+
+	reEcho := regexp.MustCompile(`^/echo/([A-Za-z]+)$`)
+	if matches := reEcho.FindStringSubmatch(request.Path); len(matches) > 0 {
 		Respond(conn, Response{
 			Version: request.Version,
 			Code:    OK,
