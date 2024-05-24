@@ -110,6 +110,22 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
+	if request.Path == "/user-agent" {
+		for _, header := range request.Headers {
+			if header.Name != "User-Agent" {
+				continue
+			}
+			Respond(conn, Response{
+				Version: request.Version,
+				Code:    OK,
+				Body:    header.Value,
+				Headers: []Header{{Name: "Content-Type", Value: "text/plain"}},
+			})
+			return
+		}
+		Respond(conn, Response{Version: request.Version, Code: BadRequest})
+	}
+
 	re := regexp.MustCompile(`^/echo/([A-Za-z]+)$`)
 	matches := re.FindStringSubmatch(request.Path)
 	if len(matches) > 0 {
@@ -117,7 +133,7 @@ func handleConnection(conn net.Conn) {
 			Version: request.Version,
 			Code:    OK,
 			Body:    matches[1],
-			Headers: []Header{Header{Name: "Content-Type", Value: "text/plain"}},
+			Headers: []Header{{Name: "Content-Type", Value: "text/plain"}},
 		})
 		return
 	}
