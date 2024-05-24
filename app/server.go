@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
 	"strings"
 
 	// Uncomment this block to pass the first stage
@@ -26,23 +28,40 @@ type Request struct {
 	Headers []Header
 }
 
-type HttpResponse struct {
+type HttpCode struct {
 	Code    uint
 	Message string
 }
 
 var (
-	BadRequest = HttpResponse{Code: 400, Message: "Bad Response"}
-	NotFound   = HttpResponse{Code: 404, Message: "Not Found"}
-	OK         = HttpResponse{Code: 200, Message: "OK"}
+	BadRequest = HttpCode{Code: 400, Message: "Bad Response"}
+	NotFound   = HttpCode{Code: 404, Message: "Not Found"}
+	OK         = HttpCode{Code: 200, Message: "OK"}
 )
 
-// func BadRequest(conn net.Conn) {
-// 	fmt.Fprintf(conn, "HTTP/1.1 400 Bad Request%s%s", HTTPDelimiter, HTTPDelimiter)
-// }
+type Response struct {
+	Code    HttpCode
+	Version string
+	Body    string
+	Headers []Header
+}
 
-func Respond(conn net.Conn, response HttpResponse) {
-	fmt.Fprintf(conn, "HTTP/1.1 %d %s%s%s", response.Code, response.Message, HTTPDelimiter, HTTPDelimiter)
+func Respond(conn net.Conn, response Response) {
+	fmt.Fprintf(conn, "%s %d %s%s", response.Version, response.Code.Code, response.Code.Message, HTTPDelimiter)
+	bodySize := len(response.Body)
+	if bodySize > 0 {
+		response.Headers = append(response.Headers, Header{Name: "Content-Length", Value: strconv.Itoa(bodySize)})
+	}
+	for _, header := range response.Headers {
+		fmt.Fprintf(conn, "%s: %s%s", header.Name, header.Value, HTTPDelimiter)
+	}
+
+	fmt.Fprint(conn, HTTPDelimiter)
+	if bodySize > 0 {
+		fmt.Fprint(conn, response.Body)
+	}
+
+	// fmt.Fprintf(conn, "HTTP/1.1 %d %s%s%s", response.Code, response.Message, HTTPDelimiter, HTTPDelimiter)
 }
 
 func handleConnection(conn net.Conn) {
@@ -61,7 +80,7 @@ func handleConnection(conn net.Conn) {
 		if i == 0 {
 			head := strings.Split(part, " ")
 			if len(head) != 3 {
-				Respond(conn, BadRequest)
+				Respond(conn, Response{Version: "HTTP/1.1", Code: BadRequest})
 				return
 			}
 			request.Method = head[0]
@@ -87,10 +106,18 @@ func handleConnection(conn net.Conn) {
 	fmt.Println(request)
 
 	if request.Path == "/" {
-		Respond(conn, OK)
+		Respond(conn, Response{Version: request.Version, Code: OK})
 		return
 	}
-	Respond(conn, NotFound)
+
+	re := regexp.MustCompile(`^/echo/([A-Za-z]+)$`)
+	matches := re.FindStringSubmatch(request.Path)
+	if len(matches) > 0 {
+		Respond(conn, Response{Version: request.Version, Code: OK, Body: matches[1]})
+		return
+	}
+
+	Respond(conn, Response{Version: request.Version, Code: NotFound})
 }
 
 func main() {
