@@ -113,7 +113,12 @@ func handleConnection(conn net.Conn) {
 	re := regexp.MustCompile(`^/echo/([A-Za-z]+)$`)
 	matches := re.FindStringSubmatch(request.Path)
 	if len(matches) > 0 {
-		Respond(conn, Response{Version: request.Version, Code: OK, Body: matches[1]})
+		Respond(conn, Response{
+			Version: request.Version,
+			Code:    OK,
+			Body:    matches[1],
+			Headers: []Header{Header{Name: "Content-Type", Value: "text/plain"}},
+		})
 		return
 	}
 
