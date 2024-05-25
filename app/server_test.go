@@ -66,19 +66,19 @@ func TestEcho(t *testing.T) {
 	}})
 }
 
-// func TestEchoGzip(t *testing.T) {
-// 	input := "abc"
-// 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:4221/echo/%s", input), nil)
-// 	req.Header.Set("Accept-Encoding", "gzip")
-// 	client := &http.Client{}
-// 	res, _ := client.Do(req)
+func TestEchoGzip(t *testing.T) {
+	input := "abc"
+	req, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:4221/echo/%s", input), nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	client := &http.Client{}
+	res, _ := client.Do(req)
 
-// 	checkResponse(t, res, Expected{status: 200, body: input, headers: map[string]string{
-// 		// "Content-Length":   strconv.Itoa(len(input)),
-// 		"Content-Type":     "text/plain",
-// 		"Content-Encoding": "gzip",
-// 	}})
-// }
+	checkResponse(t, res, Expected{status: 200, body: input, headers: map[string]string{
+		"Content-Length":   strconv.Itoa(len(input)),
+		"Content-Type":     "text/plain",
+		"Content-Encoding": "gzip",
+	}})
+}
 
 func TestUserAgent(t *testing.T) {
 	input := "CodeCrafters/1.0"
