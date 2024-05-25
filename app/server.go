@@ -5,24 +5,13 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-func getFilepath(filename string) string {
-	if len(os.Args) != 3 {
-		log.Fatal("Not enough args")
-	}
-	dir, err := filepath.Abs(os.Args[2])
-	if err != nil {
-		log.Fatal(err)
-	}
-	return filepath.Join(dir, filename)
-}
-
 func handleConnection(conn net.Conn, routes Routes) {
 	defer conn.Close()
+
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
@@ -79,59 +68,6 @@ func handleConnection(conn net.Conn, routes Routes) {
 		}
 	}
 
-	// if request.Path == "/" {
-	// 	Respond(conn, Response{Version: request.Version, Code: OK})
-	// 	return
-	// }
-
-	// if request.Path == "/user-agent" {
-	// 	for _, header := range request.Headers {
-	// 		if header.Name != "User-Agent" {
-	// 			continue
-	// 		}
-	// 		Respond(conn, Response{
-	// 			Version: request.Version,
-	// 			Code:    OK,
-	// 			Body:    header.Value,
-	// 			Headers: []Header{{Name: "Content-Type", Value: "text/plain"}},
-	// 		})
-	// 		return
-	// 	}
-	// 	Respond(conn, Response{Version: request.Version, Code: BadRequest})
-	// }
-
-	// reFiles := regexp.MustCompile(`^/files/([A-Za-z0-9_\-.]+)$`)
-	// if matches := reFiles.FindStringSubmatch(request.Path); len(matches) > 0 {
-	// 	filename := getFilepath(matches[1])
-	// 	file, err := os.ReadFile(filename)
-	// 	if os.IsNotExist(err) {
-	// 		Respond(conn, Response{Version: request.Version, Code: NotFound})
-	// 		return
-	// 	}
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-
-	// 	Respond(conn, Response{
-	// 		Version: request.Version,
-	// 		Code:    OK,
-	// 		BodyRaw: file,
-	// 		Headers: []Header{{Name: "Content-Type", Value: "application/octet-stream"}},
-	// 	})
-	// 	return
-	// }
-
-	// reEcho := regexp.MustCompile(`^/echo/([A-Za-z]+)$`)
-	// if matches := reEcho.FindStringSubmatch(request.Path); len(matches) > 0 {
-	// 	Respond(conn, Response{
-	// 		Version: request.Version,
-	// 		Code:    OK,
-	// 		Body:    matches[1],
-	// 		Headers: []Header{{Name: "Content-Type", Value: "text/plain"}},
-	// 	})
-	// 	return
-	// }
-
 	Respond(conn, Response{Version: request.Version, Code: NotFound})
 }
 
@@ -181,7 +117,34 @@ func main() {
 						Body:    matches[1],
 						Headers: []Header{{Name: "Content-Type", Value: "text/plain"}},
 					}
-				}},
+				},
+			},
+
+			{
+				regex:  regexp.MustCompile(`^/files/([A-Za-z0-9_\-.]+)`),
+				method: "GET",
+				handler: func(req Request, matches []string) Response {
+					file, notFound := readFile(matches[1])
+					if notFound {
+						return Response{Version: req.Version, Code: NotFound}
+					}
+					return Response{
+						Version: req.Version,
+						Code:    OK,
+						BodyRaw: file,
+						Headers: []Header{{Name: "Content-Type", Value: "application/octet-stream"}},
+					}
+				},
+			},
+
+			{
+				regex:  regexp.MustCompile(`^/files/([A-Za-z0-9_\-.]+)`),
+				method: "POST",
+				handler: func(req Request, matches []string) Response {
+					writeFile(matches[1], []byte(req.Body))
+					return Response{Version: req.Version, Code: OK}
+				},
+			},
 		},
 	}
 

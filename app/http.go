@@ -20,6 +20,7 @@ type Request struct {
 	Path    string
 	Version string
 	Body    string
+	BodyRaw []byte
 	Headers []Header
 }
 
