@@ -67,31 +67,36 @@ func Respond(conn net.Conn, req Request, res Response) {
 	if res.Headers == nil {
 		res.Headers = make(map[string]string)
 	}
-	if strings.Contains(req.Headers["Accept-Encoding"], "gzip") {
-		res.Headers["Content-Encoding"] = "gzip"
-	}
+
+	// isGzip := false
+	isGzip := strings.Contains(req.Headers["Accept-Encoding"], "gzip")
+	// if isGzip {
+	// 	res.Headers["Content-Encoding"] = "gzip"
+	// }
 
 	fmt.Fprintf(conn, "%s %d %s%s", res.Version, res.Code.Code, res.Code.Message, HTTPDelimiter)
-	bodySize := 0
+	var body []byte
 	if res.Body != "" {
-		bodySize = len(res.Body)
+		body = []byte(res.Body)
 	} else {
-		bodySize = len(res.BodyRaw)
+		body = res.BodyRaw
 	}
+	if isGzip && len(body) > 0 {
+		res.Headers["Content-Encoding"] = "gzip"
+		body = gzipCompress(body).Bytes()
+	}
+	bodySize := len(body)
 	if bodySize > 0 {
 		res.Headers["Content-Length"] = strconv.Itoa(bodySize)
 	}
+
 	for header, value := range res.Headers {
 		fmt.Fprintf(conn, "%s: %s%s", header, value, HTTPDelimiter)
 	}
 
 	fmt.Fprint(conn, HTTPDelimiter)
 	if bodySize > 0 {
-		if res.Body != "" {
-			fmt.Fprint(conn, res.Body)
-		} else {
-			conn.Write(res.BodyRaw)
-		}
+		conn.Write(body)
 	}
 }
 
