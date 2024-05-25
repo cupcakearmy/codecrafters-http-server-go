@@ -38,7 +38,9 @@ func checkResponse(t *testing.T, res *http.Response, expected Expected) {
 		t.Errorf(`Expected body to be "%s" but got "%s"`, expected.body, body)
 	}
 
+	// fmt.Println(expected.headers)
 	for header, value := range expected.headers {
+		// fmt.Println(header, res.Header[header])
 		if actual := res.Header[header][0]; actual != value {
 			t.Errorf(`Expected "%s" header to be "%s" but got "%s"`, header, value, actual)
 		}
@@ -63,6 +65,20 @@ func TestEcho(t *testing.T) {
 		"Content-Type":   "text/plain",
 	}})
 }
+
+// func TestEchoGzip(t *testing.T) {
+// 	input := "abc"
+// 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:4221/echo/%s", input), nil)
+// 	req.Header.Set("Accept-Encoding", "gzip")
+// 	client := &http.Client{}
+// 	res, _ := client.Do(req)
+
+// 	checkResponse(t, res, Expected{status: 200, body: input, headers: map[string]string{
+// 		// "Content-Length":   strconv.Itoa(len(input)),
+// 		"Content-Type":     "text/plain",
+// 		"Content-Encoding": "gzip",
+// 	}})
+// }
 
 func TestUserAgent(t *testing.T) {
 	input := "CodeCrafters/1.0"

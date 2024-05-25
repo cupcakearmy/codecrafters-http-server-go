@@ -64,6 +64,10 @@ type Routes struct {
 }
 
 func Respond(conn net.Conn, req Request, res Response) {
+	if res.Headers == nil {
+		res.Headers = make(map[string]string)
+	}
+
 	fmt.Fprintf(conn, "%s %d %s%s", res.Version, res.Code.Code, res.Code.Message, HTTPDelimiter)
 	bodySize := 0
 	if res.Body != "" {
@@ -76,6 +80,10 @@ func Respond(conn net.Conn, req Request, res Response) {
 	}
 	for header, value := range res.Headers {
 		fmt.Fprintf(conn, "%s: %s%s", header, value, HTTPDelimiter)
+	}
+
+	if req.Headers["Accept-Encoding"] == "gzip" {
+		res.Headers["Content-Encoding"] = "gzip"
 	}
 
 	fmt.Fprint(conn, HTTPDelimiter)
