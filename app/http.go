@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -61,16 +63,6 @@ type Routes struct {
 	regexpRoutes []RegexRoute
 }
 
-// func createHandler(routes Routes) func(conn net.Conn) {
-// 	return func(conn net.Conn) {
-
-// 		for _, route := range(routes.stringRoutes){
-
-// 		}
-
-// 	}
-// }
-
 func Respond(conn net.Conn, response Response) {
 	fmt.Fprintf(conn, "%s %d %s%s", response.Version, response.Code.Code, response.Code.Message, HTTPDelimiter)
 	bodySize := 0
@@ -94,6 +86,45 @@ func Respond(conn net.Conn, response Response) {
 			conn.Write(response.BodyRaw)
 		}
 	}
+}
 
-	// fmt.Fprintf(conn, "HTTP/1.1 %d %s%s%s", response.Code, response.Message, HTTPDelimiter, HTTPDelimiter)
+func parseRequest(conn net.Conn) (Request, bool) {
+	buffer := make([]byte, 1024)
+	n, err := conn.Read(buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	contents := string(buffer[:n])
+	parts := strings.Split(contents, HTTPDelimiter)
+	request := Request{}
+	isBody := false
+	for i, part := range parts {
+		if i == 0 {
+			head := strings.Split(part, " ")
+			if len(head) != 3 {
+				return Request{}, false
+			}
+			request.Method = head[0]
+			request.Path = head[1]
+			request.Version = head[2]
+			continue
+		}
+
+		if isBody {
+			request.Body = part
+			break
+		}
+
+		// Headers
+		if part == "" {
+			isBody = true
+			continue
+		}
+		h := strings.SplitN(part, ": ", 2)
+		header := Header{Name: h[0], Value: h[1]}
+		request.Headers = append(request.Headers, header)
+	}
+
+	return request, true
 }

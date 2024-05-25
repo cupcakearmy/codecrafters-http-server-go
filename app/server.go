@@ -2,53 +2,20 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"regexp"
-	"strings"
 )
 
 func handleConnection(conn net.Conn, routes Routes) {
 	defer conn.Close()
 
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		log.Fatal(err)
+	request, ok := parseRequest(conn)
+	if !ok {
+		Respond(conn, Response{Version: "HTTP/1.1", Code: BadRequest})
+		return
 	}
 
-	contents := string(buffer[:n])
-	parts := strings.Split(contents, HTTPDelimiter)
-	request := Request{}
-	isBody := false
-	for i, part := range parts {
-		if i == 0 {
-			head := strings.Split(part, " ")
-			if len(head) != 3 {
-				Respond(conn, Response{Version: "HTTP/1.1", Code: BadRequest})
-				return
-			}
-			request.Method = head[0]
-			request.Path = head[1]
-			request.Version = head[2]
-			continue
-		}
-
-		if isBody {
-			request.Body = part
-			break
-		}
-
-		// Headers
-		if part == "" {
-			isBody = true
-			continue
-		}
-		h := strings.SplitN(part, ": ", 2)
-		header := Header{Name: h[0], Value: h[1]}
-		request.Headers = append(request.Headers, header)
-	}
 	fmt.Println(request)
 
 	for _, route := range routes.stringRoutes {
