@@ -13,17 +13,17 @@ const (
 	HTTPDelimiter = "\r\n"
 )
 
-type Header struct {
-	Name  string
-	Value string
-}
+//	type Header struct {
+//		Name  string
+//		Value string
+//	}
 type Request struct {
 	Method  string
 	Path    string
 	Version string
 	Body    string
 	BodyRaw []byte
-	Headers []Header
+	Headers map[string]string
 }
 
 type HttpCode struct {
@@ -43,7 +43,7 @@ type Response struct {
 	Version string
 	Body    string
 	BodyRaw []byte
-	Headers []Header
+	Headers map[string]string
 }
 
 type StringRoute struct {
@@ -63,27 +63,27 @@ type Routes struct {
 	regexpRoutes []RegexRoute
 }
 
-func Respond(conn net.Conn, response Response) {
-	fmt.Fprintf(conn, "%s %d %s%s", response.Version, response.Code.Code, response.Code.Message, HTTPDelimiter)
+func Respond(conn net.Conn, req Request, res Response) {
+	fmt.Fprintf(conn, "%s %d %s%s", res.Version, res.Code.Code, res.Code.Message, HTTPDelimiter)
 	bodySize := 0
-	if response.Body != "" {
-		bodySize = len(response.Body)
+	if res.Body != "" {
+		bodySize = len(res.Body)
 	} else {
-		bodySize = len(response.BodyRaw)
+		bodySize = len(res.BodyRaw)
 	}
 	if bodySize > 0 {
-		response.Headers = append(response.Headers, Header{Name: "Content-Length", Value: strconv.Itoa(bodySize)})
+		res.Headers["Content-Length"] = strconv.Itoa(bodySize)
 	}
-	for _, header := range response.Headers {
-		fmt.Fprintf(conn, "%s: %s%s", header.Name, header.Value, HTTPDelimiter)
+	for header, value := range res.Headers {
+		fmt.Fprintf(conn, "%s: %s%s", header, value, HTTPDelimiter)
 	}
 
 	fmt.Fprint(conn, HTTPDelimiter)
 	if bodySize > 0 {
-		if response.Body != "" {
-			fmt.Fprint(conn, response.Body)
+		if res.Body != "" {
+			fmt.Fprint(conn, res.Body)
 		} else {
-			conn.Write(response.BodyRaw)
+			conn.Write(res.BodyRaw)
 		}
 	}
 }
@@ -97,7 +97,7 @@ func parseRequest(conn net.Conn) (Request, bool) {
 
 	contents := string(buffer[:n])
 	parts := strings.Split(contents, HTTPDelimiter)
-	request := Request{}
+	request := Request{Headers: map[string]string{}}
 	isBody := false
 	for i, part := range parts {
 		if i == 0 {
@@ -122,8 +122,7 @@ func parseRequest(conn net.Conn) (Request, bool) {
 			continue
 		}
 		h := strings.SplitN(part, ": ", 2)
-		header := Header{Name: h[0], Value: h[1]}
-		request.Headers = append(request.Headers, header)
+		request.Headers[h[0]] = h[1]
 	}
 
 	return request, true

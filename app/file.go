@@ -6,15 +6,21 @@ import (
 	"path/filepath"
 )
 
+var DIR string = ""
+
 func getFilepath(filename string) string {
-	if len(os.Args) != 3 {
-		log.Fatal("Not enough args")
+	if DIR == "" {
+
+		if len(os.Args) != 3 {
+			log.Fatal("Not enough args")
+		}
+		dir, err := filepath.Abs(os.Args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		DIR = dir
 	}
-	dir, err := filepath.Abs(os.Args[2])
-	if err != nil {
-		log.Fatal(err)
-	}
-	return filepath.Join(dir, filename)
+	return filepath.Join(DIR, filename)
 }
 
 func readFile(filename string) ([]byte, bool) {
