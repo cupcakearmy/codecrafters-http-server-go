@@ -67,7 +67,7 @@ func Respond(conn net.Conn, req Request, res Response) {
 	if res.Headers == nil {
 		res.Headers = make(map[string]string)
 	}
-	if req.Headers["Accept-Encoding"] == "gzip" {
+	if strings.Contains(req.Headers["Accept-Encoding"], "gzip") {
 		res.Headers["Content-Encoding"] = "gzip"
 	}
 
