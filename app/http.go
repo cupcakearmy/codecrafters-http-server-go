@@ -33,6 +33,7 @@ var (
 	BadRequest = HttpCode{Code: 400, Message: "Bad Response"}
 	NotFound   = HttpCode{Code: 404, Message: "Not Found"}
 	OK         = HttpCode{Code: 200, Message: "OK"}
+	Created    = HttpCode{Code: 201, Message: "Created"}
 )
 
 type Response struct {

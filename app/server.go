@@ -142,7 +142,7 @@ func main() {
 				method: "POST",
 				handler: func(req Request, matches []string) Response {
 					writeFile(matches[1], []byte(req.Body))
-					return Response{Version: req.Version, Code: OK}
+					return Response{Version: req.Version, Code: Created}
 				},
 			},
 		},
