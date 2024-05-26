@@ -43,6 +43,7 @@ var routes = Routes{
 			},
 		},
 
+		// Read file
 		{
 			regex:  regexp.MustCompile(`^/files/([A-Za-z0-9_\-.]+)`),
 			method: "GET",
@@ -60,6 +61,7 @@ var routes = Routes{
 			},
 		},
 
+		// Write file
 		{
 			regex:  regexp.MustCompile(`^/files/([A-Za-z0-9_\-.]+)`),
 			method: "POST",

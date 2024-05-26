@@ -9,8 +9,8 @@ import (
 var DIR string = ""
 
 func getFilepath(filename string) string {
+	// Set the DIR if not already set
 	if DIR == "" {
-
 		if len(os.Args) != 3 {
 			log.Fatal("Not enough args")
 		}

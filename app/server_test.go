@@ -38,8 +38,11 @@ func checkResponse(t *testing.T, res *http.Response, expected Expected) {
 		t.Errorf(`Expected body to be "%s" but got "%s"`, expected.body, body)
 	}
 
+	log.Println("HEADERS", res.Header)
 	for header, value := range expected.headers {
-		if actual := res.Header[header][0]; actual != value {
+		if res.Header[header] == nil {
+			t.Errorf(`Expected "%s" header to be present`, header)
+		} else if actual := res.Header[header][0]; actual != value {
 			t.Errorf(`Expected "%s" header to be "%s" but got "%s"`, header, value, actual)
 		}
 	}
@@ -64,23 +67,24 @@ func TestEcho(t *testing.T) {
 	}})
 }
 
-// func TestEchoGzip(t *testing.T) {
-// 	input := "abc"
-// 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:4221/echo/%s", input), nil)
-// 	req.Header.Set("Accept-Encoding", "gzip")
-// 	client := &http.Client{}
-// 	res, _ := client.Do(req)
+func TestEchoGzip(t *testing.T) {
+	input := "abc"
+	req, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:4221/echo/%s", input), nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	client := &http.Client{}
+	res, _ := client.Do(req)
 
-// 	checkResponse(t, res, Expected{status: 200, body: input, headers: map[string]string{
-// 		"Content-Length":   strconv.Itoa(len(input)),
-// 		"Content-Type":     "text/plain",
-// 		"Content-Encoding": "gzip",
-// 	}})
-// }
+	checkResponse(t, res, Expected{status: 200, body: input, headers: map[string]string{
+		"Content-Length":   "27", // Size of gzip "abc"
+		"Content-Type":     "text/plain",
+		"Content-Encoding": "gzip",
+	}})
+}
 
 func TestUserAgent(t *testing.T) {
 	input := "CodeCrafters/1.0"
 	req, _ := http.NewRequest("GET", "http://localhost:4221/user-agent", nil)
+	req.Header.Del("")
 	req.Header.Set("User-Agent", input)
 	client := &http.Client{}
 	res, _ := client.Do(req)

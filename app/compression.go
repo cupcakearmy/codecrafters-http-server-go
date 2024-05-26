@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 )
 
-func gzipCompress(data []byte) *bytes.Buffer {
+func gzipCompress(data []byte) []byte {
 	buf := &bytes.Buffer{}
 	gz := gzip.NewWriter(buf)
 	if _, err := gz.Write(data); err != nil {
@@ -14,7 +14,5 @@ func gzipCompress(data []byte) *bytes.Buffer {
 	if err := gz.Close(); err != nil {
 		panic(err)
 	}
-
-	// fmt.Println("Hexadecimal Representation:", hex.EncodeToString(buf.Bytes()))
-	return buf
+	return buf.Bytes()
 }
